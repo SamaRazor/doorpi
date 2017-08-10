@@ -6,15 +6,16 @@ import java.io.IOException
 import java.net.ServerSocket
 import java.net.Socket
 
-
-class Server: Runnable {
+class Server : Runnable {
     private val port = 1489
     private val serverSocket: ServerSocket
+
+    private val clientSockets = HashSet<Socket>()
     private var isStopped = false
 
     init {
         serverSocket = ServerSocket(port)
-        println("Server running on port $port.")
+        println("----- Server running on port $port.")
     }
 
     override fun run() {
@@ -22,6 +23,9 @@ class Server: Runnable {
             while (!isStopped) {
                 try {
                     val clientSocket = serverSocket.accept()
+                    synchronized(clientSockets) {
+                        clientSockets.add(clientSocket)
+                    }
                     async(CommonPool) {
                         handleClientSocket(clientSocket)
                     }
@@ -33,8 +37,29 @@ class Server: Runnable {
                 }
             }
         } finally {
+            stop()
+        }
+    }
+
+    fun closeAll() {
+        synchronized(clientSockets) {
+            val iterator = clientSockets.iterator()
+            while (iterator.hasNext()) {
+                val curSocket = iterator.next()
+                println("----- Closing ${curSocket.inetAddress}:${curSocket.port}")
+                curSocket.close()
+                iterator.remove()
+            }
+        }
+        println("----- All current connections were closed.")
+    }
+
+    fun stop() {
+        if (!isStopped) {
+            closeAll()
             serverSocket.close()
-            println("Server stopped.")
+            isStopped = true
+            println("----- Server stopped.")
         }
     }
 
