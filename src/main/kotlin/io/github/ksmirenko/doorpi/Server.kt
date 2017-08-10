@@ -7,7 +7,7 @@ import java.net.ServerSocket
 import java.net.Socket
 
 class Server : Runnable {
-    private val port = 1489
+    private val port = 2507
     private val serverSocket: ServerSocket
 
     private val clientSockets = HashSet<Socket>()
